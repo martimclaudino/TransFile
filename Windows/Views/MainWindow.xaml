@@ -11,7 +11,7 @@
         <BooleanToVisibilityConverter x:Key="BoolToVis"/>
 
         <Style x:Key="MenuTabStyle"
-               TargetType="RadioButton">
+                TargetType="RadioButton">
             <Setter Property="Height"
                     Value="60"/>
             <Setter Property="Foreground"
@@ -30,17 +30,17 @@
                                 Margin="0,0,0,2">
                             <Border.Effect>
                                 <DropShadowEffect BlurRadius="5"
-                                                  ShadowDepth="2"
-                                                  Opacity="0.15"
-                                                  Direction="270"/>
+                                        ShadowDepth="2"
+                                        Opacity="0.15"
+                                        Direction="270"/>
                             </Border.Effect>
                             <ContentPresenter HorizontalAlignment="Left"
-                                              VerticalAlignment="Center"
-                                              Margin="20,0,0,0"/>
+                                    VerticalAlignment="Center"
+                                    Margin="20,0,0,0"/>
                         </Border>
                         <ControlTemplate.Triggers>
                             <Trigger Property="IsChecked"
-                                     Value="True">
+                                    Value="True">
                                 <Setter TargetName="TabBorder"
                                         Property="Background"
                                         Value="#9CA3AF"/>
@@ -50,7 +50,7 @@
                                         Value="Bold"/>
                             </Trigger>
                             <Trigger Property="IsMouseOver"
-                                     Value="True">
+                                    Value="True">
                                 <Setter TargetName="TabBorder"
                                         Property="Background"
                                         Value="#CBD5E1"/>
@@ -69,42 +69,74 @@
         </Grid.ColumnDefinitions>
 
         <StackPanel Grid.Column="0"
-                    Margin="0,40,0,0">
+                Margin="0,40,0,0">
             <RadioButton x:Name="RbShare"
-                         Content="Share files with your phone"
-                         Style="{StaticResource MenuTabStyle}"
-                         IsChecked="True"/>
+                    Content="Share files with your phone"
+                    Style="{StaticResource MenuTabStyle}"
+                    IsChecked="True"/>
             <RadioButton x:Name="RbAccess"
-                         Content="Access files from your phone"
-                         Style="{StaticResource MenuTabStyle}"/>
+                    Content="Access files from your phone"
+                    Style="{StaticResource MenuTabStyle}"/>
             <RadioButton x:Name="RbSettings"
-                         Content="Settings"
-                         Style="{StaticResource MenuTabStyle}"/>
+                    Content="Settings"
+                    Style="{StaticResource MenuTabStyle}"/>
         </StackPanel>
 
         <Grid Grid.Column="1"
-              Margin="30">
+                Margin="30">
             <Grid.RowDefinitions>
                 <RowDefinition Height="Auto"/>
                 <RowDefinition Height="*"/>
             </Grid.RowDefinitions>
 
             <TextBlock Grid.Row="0"
-                       FontSize="14"
-                       Foreground="#6B7280"
-                       TextWrapping="Wrap"
-                       Margin="0,0,0,30">
+                    FontSize="14"
+                    Foreground="#6B7280"
+                    TextWrapping="Wrap"
+                    Margin="0,0,0,30">
                 To connect your phone to the computer, generate the QR code on the computer and scan it with the app on your phone.
             </TextBlock>
 
             <Grid Grid.Row="1"
-                  Visibility="{Binding IsChecked, ElementName=RbShare, Converter={StaticResource BoolToVis}}">
-                <ListBox Margin="0,0,0,80"
-                         BorderBrush="#D1D5DB"
-                         BorderThickness="1"
-                         Background="#F9FAFB"/>
+                    Visibility="{Binding IsChecked, ElementName=RbShare, Converter={StaticResource BoolToVis}}">
 
-                <Button Content="Share"
+                <ListBox x:Name="LstFiles"
+                        Margin="0,0,0,80"
+                        BorderBrush="#D1D5DB"
+                        BorderThickness="1"
+                        Background="#F9FAFB"
+                        HorizontalContentAlignment="Stretch">
+                    <ListBox.ItemTemplate>
+                        <DataTemplate>
+                            <Grid Margin="5">
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="*"/>
+                                    <ColumnDefinition Width="Auto"/>
+                                </Grid.ColumnDefinitions>
+                                <TextBlock Grid.Column="0"
+                                        Text="{Binding FileName}"
+                                        VerticalAlignment="Center"
+                                        FontSize="14"
+                                        Margin="0,0,15,0"
+                                        TextTrimming="CharacterEllipsis"/>
+                                <Button Grid.Column="1"
+                                        Content="X"
+                                        Click="RemoveFile_Click"
+                                        Tag="{Binding}"
+                                        Foreground="White"
+                                        Background="#EF4444"
+                                        FontWeight="Bold"
+                                        Width="24"
+                                        Height="24"
+                                        BorderThickness="0"
+                                        Cursor="Hand"/>
+                            </Grid>
+                        </DataTemplate>
+                    </ListBox.ItemTemplate>
+                </ListBox>
+
+                <Button x:Name="BtnShare"
+                        Content="Share"
                         HorizontalAlignment="Left"
                         VerticalAlignment="Bottom"
                         Width="120"
@@ -133,11 +165,11 @@
                             <Border Background="{TemplateBinding Background}"
                                     CornerRadius="30">
                                 <TextBlock Text="+"
-                                           FontSize="38"
-                                           FontWeight="Light"
-                                           HorizontalAlignment="Center"
-                                           VerticalAlignment="Center"
-                                           Margin="0,-5,0,0"/>
+                                        FontSize="38"
+                                        FontWeight="Light"
+                                        HorizontalAlignment="Center"
+                                        VerticalAlignment="Center"
+                                        Margin="0,-5,0,0"/>
                             </Border>
                         </ControlTemplate>
                     </Button.Template>
@@ -145,12 +177,11 @@
             </Grid>
 
             <Grid Grid.Row="1"
-                  Visibility="{Binding IsChecked, ElementName=RbAccess, Converter={StaticResource BoolToVis}}">
+                    Visibility="{Binding IsChecked, ElementName=RbAccess, Converter={StaticResource BoolToVis}}">
                 <ListBox Margin="0,0,0,80"
-                         BorderBrush="#D1D5DB"
-                         BorderThickness="1"
-                         Background="#F9FAFB"/>
-
+                        BorderBrush="#D1D5DB"
+                        BorderThickness="1"
+                        Background="#F9FAFB"/>
                 <Button Content="Download"
                         HorizontalAlignment="Left"
                         VerticalAlignment="Bottom"
@@ -164,7 +195,6 @@
                         Opacity="0.5"
                         IsEnabled="False"
                         Cursor="Hand"/>
-
                 <Button Content="Phone"
                         HorizontalAlignment="Right"
                         VerticalAlignment="Bottom"
@@ -181,7 +211,7 @@
                             <Border Background="{TemplateBinding Background}"
                                     CornerRadius="10">
                                 <ContentPresenter HorizontalAlignment="Center"
-                                                  VerticalAlignment="Center"/>
+                                        VerticalAlignment="Center"/>
                             </Border>
                         </ControlTemplate>
                     </Button.Template>
@@ -189,13 +219,12 @@
             </Grid>
 
             <Grid Grid.Row="1"
-                  Visibility="{Binding IsChecked, ElementName=RbSettings, Converter={StaticResource BoolToVis}}">
+                    Visibility="{Binding IsChecked, ElementName=RbSettings, Converter={StaticResource BoolToVis}}">
                 <StackPanel>
                     <TextBlock Text="Select download Path:"
-                               FontSize="16"
-                               FontWeight="Bold"
-                               Margin="0,0,0,10"/>
-
+                            FontSize="16"
+                            FontWeight="Bold"
+                            Margin="0,0,0,10"/>
                     <Button x:Name="BtnDownloadPath"
                             Click="SelectPath_Click"
                             Content="C:\Users\Downloads\TransFile"
@@ -208,37 +237,60 @@
                             FontSize="14"
                             Cursor="Hand"/>
 
-                    <ToggleButton x:Name="BtnGenerateQr"
-                                  Content="Generate qr code"
-                                  Margin="0,30,0,0"
-                                  Width="200"
-                                  Height="45"
-                                  HorizontalAlignment="Left"
-                                  Background="#10B981"
-                                  Foreground="White"
-                                  FontSize="16"
-                                  FontWeight="Bold"
-                                  BorderThickness="0"
-                                  Cursor="Hand">
-                        <ToggleButton.Template>
-                            <ControlTemplate TargetType="ToggleButton">
+                    <Button Content="Generate qr code"
+                            Click="ShowConnectionQr_Click"
+                            Margin="0,30,0,0"
+                            Width="220"
+                            Height="45"
+                            HorizontalAlignment="Left"
+                            Background="#10B981"
+                            Foreground="White"
+                            FontSize="16"
+                            FontWeight="Bold"
+                            BorderThickness="0"
+                            Cursor="Hand">
+                        <Button.Template>
+                            <ControlTemplate TargetType="Button">
                                 <Border Background="{TemplateBinding Background}"
                                         CornerRadius="10">
                                     <ContentPresenter HorizontalAlignment="Center"
-                                                      VerticalAlignment="Center"/>
+                                            VerticalAlignment="Center"/>
                                 </Border>
                             </ControlTemplate>
-                        </ToggleButton.Template>
-                    </ToggleButton>
+                        </Button.Template>
+                    </Button>
+
+                    <Button Content="Download the mobile App"
+                            Click="ShowDownloadAppQr_Click"
+                            Margin="0,15,0,0"
+                            Width="220"
+                            Height="45"
+                            HorizontalAlignment="Left"
+                            Background="#10B981"
+                            Foreground="White"
+                            FontSize="16"
+                            FontWeight="Bold"
+                            BorderThickness="0"
+                            Cursor="Hand">
+                        <Button.Template>
+                            <ControlTemplate TargetType="Button">
+                                <Border Background="{TemplateBinding Background}"
+                                        CornerRadius="10">
+                                    <ContentPresenter HorizontalAlignment="Center"
+                                            VerticalAlignment="Center"/>
+                                </Border>
+                            </ControlTemplate>
+                        </Button.Template>
+                    </Button>
                 </StackPanel>
             </Grid>
         </Grid>
 
-        <Grid Grid.ColumnSpan="2"
-              Background="#B3000000"
-              Panel.ZIndex="100"
-              Visibility="{Binding IsChecked, ElementName=BtnGenerateQr, Converter={StaticResource BoolToVis}}">
-
+        <Grid x:Name="QrOverlay"
+                Grid.ColumnSpan="2"
+                Background="#B3000000"
+                Panel.ZIndex="100"
+                Visibility="Collapsed">
             <Border Background="White"
                     Width="400"
                     Height="450"
@@ -254,14 +306,15 @@
                             Width="30"
                             Height="30"
                             Background="Transparent"
-                            Foreground="#6B7280"
-                            FontSize="18"
+                            Foreground="#8B0000"
+                            BorderBrush="#8B0000"
+                            BorderThickness="2"
+                            FontSize="16"
                             FontWeight="Bold"
-                            BorderThickness="0"
                             Cursor="Hand"/>
 
                     <StackPanel HorizontalAlignment="Center"
-                                VerticalAlignment="Center">
+                            VerticalAlignment="Center">
                         <Border Width="220"
                                 Height="220"
                                 Background="#F3F4F6"
@@ -272,18 +325,19 @@
 
 [Image of QR Code]
 "
-                                       VerticalAlignment="Center"
-                                       HorizontalAlignment="Center"
-                                       Foreground="#9CA3AF"
-                                       FontSize="16"/>
+                                    VerticalAlignment="Center"
+                                    HorizontalAlignment="Center"
+                                    Foreground="#9CA3AF"
+                                    FontSize="16"/>
                         </Border>
-                        <TextBlock Text="scan with the app on your phone to connect"
-                                   FontSize="18"
-                                   FontWeight="Medium"
-                                   Foreground="#374151"
-                                   TextWrapping="Wrap"
-                                   TextAlignment="Center"
-                                   Width="280"/>
+                        <TextBlock x:Name="QrOverlayText"
+                                Text="scan with the app on your phone to connect"
+                                FontSize="18"
+                                FontWeight="Medium"
+                                Foreground="#374151"
+                                TextWrapping="Wrap"
+                                TextAlignment="Center"
+                                Width="280"/>
                     </StackPanel>
                 </Grid>
             </Border>

@@ -1,21 +1,44 @@
 ﻿using Microsoft.Win32;
-using System.Diagnostics;
+using System.Collections.ObjectModel;
+using System.IO;
 using System.Windows;
 
 namespace Windows.Views
 {
+    public class SharedFileItem
+    {
+        public string FilePath { get; set; } = string.Empty;
+        public string FileName { get; set; } = string.Empty;
+    }
+
     public partial class MainWindow : Window
     {
+        public ObservableCollection<SharedFileItem> SelectedFiles { get; set; }
+
         public MainWindow()
         {
             InitializeComponent();
+
+            SelectedFiles = new ObservableCollection<SharedFileItem>();
+            LstFiles.ItemsSource = SelectedFiles;
+
+            SelectedFiles.CollectionChanged += SelectedFiles_CollectionChanged;
         }
 
-        private void CloseQr_Click(object sender, RoutedEventArgs e)
+        // ==============================================================
+        // Enable/Disable Share button
+        // ==============================================================
+        private void SelectedFiles_CollectionChanged(object? sender, System.Collections.Specialized.NotifyCollectionChangedEventArgs e)
         {
-            BtnGenerateQr.IsChecked = false;
+            bool hasFiles = SelectedFiles.Count > 0;
+
+            BtnShare.IsEnabled = hasFiles;
+            BtnShare.Opacity = hasFiles ? 1.0 : 0.5;
         }
 
+        // ==============================================================
+        // Share tab
+        // ==============================================================
         private void AddFiles_Click(object sender, RoutedEventArgs e)
         {
             OpenFileDialog openFileDialog = new OpenFileDialog();
@@ -24,14 +47,28 @@ namespace Windows.Views
 
             if (openFileDialog.ShowDialog() == true)
             {
-                string[] selectedFiles = openFileDialog.FileNames;
-                foreach (string file in selectedFiles)
+                foreach (string file in openFileDialog.FileNames)
                 {
-                    Debug.WriteLine($"Ficheiro selecionado: {file}");
+                    SelectedFiles.Add(new SharedFileItem
+                    {
+                        FilePath = file,
+                        FileName = Path.GetFileName(file)
+                    });
                 }
             }
         }
 
+        private void RemoveFile_Click(object sender, RoutedEventArgs e)
+        {
+            if (sender is System.Windows.Controls.Button btn && btn.Tag is SharedFileItem fileToRemove)
+            {
+                SelectedFiles.Remove(fileToRemove);
+            }
+        }
+
+        // ==============================================================
+        // Settings tab
+        // ==============================================================
         private void SelectPath_Click(object sender, RoutedEventArgs e)
         {
             OpenFolderDialog openFolderDialog = new OpenFolderDialog();
@@ -41,6 +78,26 @@ namespace Windows.Views
             {
                 BtnDownloadPath.Content = openFolderDialog.FolderName;
             }
+        }
+
+        // ==============================================================
+        // QR codes overlay
+        // ==============================================================
+        private void ShowConnectionQr_Click(object sender, RoutedEventArgs e)
+        {
+            QrOverlayText.Text = "scan with the app on your phone to connect";
+            QrOverlay.Visibility = Visibility.Visible;
+        }
+
+        private void ShowDownloadAppQr_Click(object sender, RoutedEventArgs e)
+        {
+            QrOverlayText.Text = "scan to download the Android app";
+            QrOverlay.Visibility = Visibility.Visible;
+        }
+
+        private void CloseQr_Click(object sender, RoutedEventArgs e)
+        {
+            QrOverlay.Visibility = Visibility.Collapsed;
         }
     }
 }
