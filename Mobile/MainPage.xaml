@@ -1,0 +1,216 @@
+﻿<ContentPage xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
+             x:Class="Mobile.MainPage"
+             BackgroundColor="#E5E7EB">
+
+    <Grid>
+
+        <Grid RowDefinitions="60, Auto, *">
+
+            <Grid Grid.Row="0"
+                  ColumnDefinitions="Auto, *"
+                  BackgroundColor="White"
+                  Padding="15,0">
+                <Label Text="☰"
+                       FontSize="28"
+                       VerticalOptions="Center"
+                       TextColor="#1F2937"
+                       FontAttributes="Bold">
+                    <Label.GestureRecognizers>
+                        <TapGestureRecognizer Tapped="OpenSettings_Tapped"/>
+                    </Label.GestureRecognizers>
+                </Label>
+                <Label Grid.Column="1"
+                       Text="TransFile"
+                       FontSize="20"
+                       FontAttributes="Bold"
+                       TextColor="#3B82F6"
+                       VerticalOptions="Center"
+                       HorizontalOptions="Center"
+                       Margin="-30,0,0,0"/>
+            </Grid>
+
+            <Grid Grid.Row="1"
+                  ColumnDefinitions="*, *"
+                  BackgroundColor="White"
+                  HeightRequest="50">
+                <Label x:Name="LblTabShare"
+                       Text="Share files with PC"
+                       TextColor="#1F2937"
+                       FontAttributes="Bold"
+                       HorizontalOptions="Center"
+                       VerticalOptions="Center">
+                    <Label.GestureRecognizers>
+                        <TapGestureRecognizer Tapped="TabShare_Tapped"/>
+                    </Label.GestureRecognizers>
+                </Label>
+
+                <Label x:Name="LblTabAccess"
+                       Grid.Column="1"
+                       Text="Access files from PC"
+                       TextColor="#6B7280"
+                       HorizontalOptions="Center"
+                       VerticalOptions="Center">
+                    <Label.GestureRecognizers>
+                        <TapGestureRecognizer Tapped="TabAccess_Tapped"/>
+                    </Label.GestureRecognizers>
+                </Label>
+
+                <BoxView x:Name="TabIndicator"
+                         BackgroundColor="#3B82F6"
+                         HeightRequest="3"
+                         VerticalOptions="End"
+                         HorizontalOptions="Start"
+                         WidthRequest="150"/>
+            </Grid>
+
+            <Grid Grid.Row="2"
+                  x:Name="ContentArea"
+                  IsClippedToBounds="True">
+
+                <Grid x:Name="ViewShare"
+                      Padding="20">
+                    <Grid RowDefinitions="*, Auto">
+                        <CollectionView x:Name="LstFiles"
+                                        Grid.Row="0"
+                                        Margin="0,0,0,20"
+                                        BackgroundColor="#F9FAFB">
+                            <CollectionView.ItemTemplate>
+                                <DataTemplate>
+                                    <Grid ColumnDefinitions="*, Auto"
+                                          Padding="15"
+                                          Margin="0,0,0,5"
+                                          BackgroundColor="White">
+                                        <Label Text="{Binding FileName}"
+                                               VerticalOptions="Center"
+                                               FontSize="14"
+                                               LineBreakMode="TailTruncation"
+                                               TextColor="#374151"/>
+                                        <Button Grid.Column="1"
+                                                Text="X"
+                                                Clicked="RemoveFile_Clicked"
+                                                CommandParameter="{Binding}"
+                                                BackgroundColor="#EF4444"
+                                                TextColor="White"
+                                                FontAttributes="Bold"
+                                                WidthRequest="35"
+                                                HeightRequest="35"
+                                                CornerRadius="5"/>
+                                    </Grid>
+                                </DataTemplate>
+                            </CollectionView.ItemTemplate>
+                        </CollectionView>
+
+                        <Grid Grid.Row="1"
+                              ColumnDefinitions="Auto, *, Auto">
+                            <Button x:Name="BtnShare"
+                                    Text="Share"
+                                    BackgroundColor="#3B82F6"
+                                    TextColor="White"
+                                    FontAttributes="Bold"
+                                    WidthRequest="120"
+                                    HeightRequest="50"
+                                    CornerRadius="10"
+                                    Opacity="0.5"
+                                    IsEnabled="False"/>
+
+                            <Button Grid.Column="2"
+                                    Text="+"
+                                    Clicked="AddFiles_Clicked"
+                                    BackgroundColor="#10B981"
+                                    TextColor="White"
+                                    FontSize="24"
+                                    WidthRequest="60"
+                                    HeightRequest="60"
+                                    CornerRadius="30"/>
+                        </Grid>
+                    </Grid>
+                </Grid>
+
+                <Grid x:Name="ViewAccess"
+                      Padding="20">
+                    <Grid RowDefinitions="*, Auto">
+                        <CollectionView Grid.Row="0"
+                                        Margin="0,0,0,20"
+                                        BackgroundColor="#F9FAFB"/>
+
+                        <Grid Grid.Row="1"
+                              ColumnDefinitions="Auto, *, Auto">
+                            <Button Text="Download"
+                                    BackgroundColor="#3B82F6"
+                                    TextColor="White"
+                                    FontAttributes="Bold"
+                                    WidthRequest="120"
+                                    HeightRequest="50"
+                                    CornerRadius="10"
+                                    Opacity="0.5"
+                                    IsEnabled="False"/>
+
+                            <Button Grid.Column="2"
+                                    Text="PC"
+                                    BackgroundColor="#8B5CF6"
+                                    TextColor="White"
+                                    FontAttributes="Bold"
+                                    WidthRequest="80"
+                                    HeightRequest="50"
+                                    CornerRadius="10"/>
+                        </Grid>
+                    </Grid>
+                </Grid>
+
+            </Grid>
+        </Grid>
+
+        <Grid x:Name="SettingsOverlay"
+              BackgroundColor="#E5E7EB"
+              TranslationX="-500">
+            <Grid RowDefinitions="60, Auto, Auto"
+                  Padding="20">
+                <Grid Grid.Row="0"
+                      ColumnDefinitions="Auto, *">
+                    <Button Text="←"
+                            Clicked="CloseSettings_Clicked"
+                            BackgroundColor="Transparent"
+                            TextColor="#1F2937"
+                            FontSize="24"
+                            FontAttributes="Bold"
+                            WidthRequest="50"
+                            HeightRequest="50"/>
+                    <Label Grid.Column="1"
+                           Text="Settings"
+                           FontSize="22"
+                           FontAttributes="Bold"
+                           VerticalOptions="Center"
+                           TextColor="#1F2937"/>
+                </Grid>
+
+                <VerticalStackLayout Grid.Row="1"
+                                     Margin="0,30,0,30"
+                                     Spacing="10">
+                    <Label Text="Select download Path:"
+                           FontSize="16"
+                           FontAttributes="Bold"
+                           TextColor="#374151"/>
+                    <Button Text="/storage/emulated/0/Download/TransFile"
+                            HorizontalOptions="Fill"
+                            HeightRequest="55"
+                            BackgroundColor="#F9FAFB"
+                            TextColor="#374151"
+                            BorderColor="#9CA3AF"
+                            BorderWidth="1"
+                            CornerRadius="10"/>
+                </VerticalStackLayout>
+
+                <Button Grid.Row="2"
+                        Text="Connect to Windows device"
+                        Clicked="ConnectScanner_Clicked"
+                        BackgroundColor="#10B981"
+                        TextColor="White"
+                        FontAttributes="Bold"
+                        HeightRequest="55"
+                        CornerRadius="10"/>
+            </Grid>
+        </Grid>
+
+    </Grid>
+</ContentPage>
