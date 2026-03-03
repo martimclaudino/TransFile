@@ -12,7 +12,6 @@ using System;
 
 namespace Windows.Views
 {
-    // Class that represents each file in the list
     public class SharedFileItem
     {
         public string FilePath { get; set; } = string.Empty;
@@ -23,20 +22,20 @@ namespace Windows.Views
     {
         public ObservableCollection<SharedFileItem> SelectedFiles { get; set; }
 
+        // NOVA VARIÁVEL: Guarda a pasta de destino (por defeito vai para os Downloads do PC)
+        private string _downloadPath = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.UserProfile), "Downloads");
+
         public MainWindow()
         {
             InitializeComponent();
 
-            // Initialize the file list
             SelectedFiles = new ObservableCollection<SharedFileItem>();
             LstFiles.ItemsSource = SelectedFiles;
             SelectedFiles.CollectionChanged += SelectedFiles_CollectionChanged;
 
-            // Start our mailman (web server) in the background!
             _ = StartWebServer();
         }
 
-        // Enable or disable the "Share" button based on whether there are files in the list
         private void SelectedFiles_CollectionChanged(object? sender, System.Collections.Specialized.NotifyCollectionChangedEventArgs e)
         {
             bool hasFiles = SelectedFiles.Count > 0;
@@ -44,11 +43,6 @@ namespace Windows.Views
             BtnShare.Opacity = hasFiles ? 1.0 : 0.5;
         }
 
-        // ==============================================================
-        // Button Functions (Add, Remove, Select Folder)
-        // ==============================================================
-
-        // Click on "+" to add files
         private void AddFiles_Click(object sender, RoutedEventArgs e)
         {
             OpenFileDialog openFileDialog = new OpenFileDialog
@@ -70,7 +64,6 @@ namespace Windows.Views
             }
         }
 
-        // Click on the red "X" to remove a file from the list
         private void RemoveFile_Click(object sender, RoutedEventArgs e)
         {
             if (sender is Button button && button.Tag is SharedFileItem itemToRemove)
@@ -79,7 +72,6 @@ namespace Windows.Views
             }
         }
 
-        // Click on the Downloads folder button in settings
         private void SelectPath_Click(object sender, RoutedEventArgs e)
         {
             OpenFolderDialog folderDialog = new OpenFolderDialog
@@ -89,15 +81,12 @@ namespace Windows.Views
 
             if (folderDialog.ShowDialog() == true)
             {
-                BtnDownloadPath.Content = folderDialog.FolderName;
+                // ATUALIZADO: Guarda o caminho real para a variável e mostra no botão
+                _downloadPath = folderDialog.FolderName;
+                BtnDownloadPath.Content = _downloadPath;
             }
         }
 
-        // ==============================================================
-        // QR Code Overlay and Network Logic
-        // ==============================================================
-
-        // Get the PC's IP address on the Wi-Fi network
         private string GetLocalIPAddress()
         {
             var host = Dns.GetHostEntry(Dns.GetHostName());
@@ -111,7 +100,6 @@ namespace Windows.Views
             return "127.0.0.1";
         }
 
-        // Convert text into an Image (BitmapImage) for the screen
         private BitmapImage GenerateQrCodeImage(string textToEncode)
         {
             using (QRCodeGenerator qrGenerator = new QRCodeGenerator())
@@ -133,7 +121,6 @@ namespace Windows.Views
             }
         }
 
-        // Generate QR code for the App to connect to the PC
         private void ShowConnectionQr_Click(object sender, RoutedEventArgs e)
         {
             string myIp = GetLocalIPAddress();
@@ -144,7 +131,6 @@ namespace Windows.Views
             QrOverlay.Visibility = Visibility.Visible;
         }
 
-        // Generate QR code to download the APK
         private void ShowDownloadAppQr_Click(object sender, RoutedEventArgs e)
         {
             string myIp = GetLocalIPAddress();
@@ -155,7 +141,6 @@ namespace Windows.Views
             QrOverlay.Visibility = Visibility.Visible;
         }
 
-        // Close the QR Code window
         private void CloseQr_Click(object sender, RoutedEventArgs e)
         {
             QrOverlay.Visibility = Visibility.Collapsed;
@@ -168,59 +153,75 @@ namespace Windows.Views
         {
             string ip = GetLocalIPAddress();
             HttpListener listener = new HttpListener();
-
-            // Tell the server to listen on this IP and port
             listener.Prefixes.Add($"http://{ip}:8080/");
 
             try
             {
                 listener.Start();
 
-                // The server runs in an infinite loop waiting for requests
                 while (true)
                 {
                     HttpListenerContext context = await listener.GetContextAsync();
                     HttpListenerRequest request = context.Request;
                     HttpListenerResponse response = context.Response;
 
-                    // If the phone requests /download (when it reads the QR Code)
+                    // 1. ROTA DE DOWNLOAD DO APK
                     if (request.Url != null && request.Url.AbsolutePath.Equals("/download", StringComparison.OrdinalIgnoreCase))
                     {
-                        // Look for the file in the folder where we run the 'dotnet run' command
                         string currentDirectory = Directory.GetCurrentDirectory();
                         string apkPath = Path.Combine(currentDirectory, "TransFileMobile.apk");
 
                         if (File.Exists(apkPath))
                         {
                             byte[] fileBytes = File.ReadAllBytes(apkPath);
-
-                            // Prepare the header to force the download in the phone's browser
                             response.ContentType = "application/vnd.android.package-archive";
                             response.ContentLength64 = fileBytes.Length;
                             response.AddHeader("Content-Disposition", "attachment; filename=\"TransFile.apk\"");
-
-                            // Send the file!
                             await response.OutputStream.WriteAsync(fileBytes, 0, fileBytes.Length);
                         }
                         else
                         {
-                            // If you forget to paste the APK there, it returns a 404 error
                             response.StatusCode = 404;
+                        }
+                    }
+                    // 2. NOVA ROTA: RECEBER FICHEIROS DO TELEMÓVEL
+                    else if (request.Url != null && request.Url.AbsolutePath.Equals("/upload", StringComparison.OrdinalIgnoreCase) && request.HttpMethod == "POST")
+                    {
+                        try
+                        {
+                            // Apanha o nome do ficheiro que o telemóvel enviou no cabeçalho
+                            string fileName = request.Headers["X-FileName"] ?? $"file_{DateTime.Now.Ticks}.dat";
+                            fileName = Uri.UnescapeDataString(fileName); // Descodifica espaços e acentos
+
+                            string fullPath = Path.Combine(_downloadPath, fileName);
+
+                            // Pega nos dados (Stream) e guarda diretamente na pasta selecionada
+                            using (var fileStream = new FileStream(fullPath, FileMode.Create))
+                            {
+                                await request.InputStream.CopyToAsync(fileStream);
+                            }
+
+                            // Mostra um aviso na interface do PC a dizer que recebeu o ficheiro
+                            Application.Current.Dispatcher.Invoke(() =>
+                            {
+                                MessageBox.Show($"File received successfully:\n{fileName}", "Incoming File", MessageBoxButton.OK, MessageBoxImage.Information);
+                            });
+
+                            response.StatusCode = 200;
+                        }
+                        catch (Exception ex)
+                        {
+                            response.StatusCode = 500;
+                            Application.Current.Dispatcher.Invoke(() => MessageBox.Show($"Error saving file: {ex.Message}", "Error", MessageBoxButton.OK, MessageBoxImage.Error));
                         }
                     }
                     else
                     {
-                        // For any other request, return OK
                         response.StatusCode = 200;
                     }
 
-                    // Close the connection
                     response.Close();
                 }
-            }
-            catch (HttpListenerException)
-            {
-                MessageBox.Show("Error: Windows blocked the server. Try running the command prompt as Administrator!", "Network Error", MessageBoxButton.OK, MessageBoxImage.Error);
             }
             catch (Exception ex)
             {

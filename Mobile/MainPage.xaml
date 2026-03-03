@@ -1,5 +1,6 @@
 ﻿<ContentPage xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
              xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
+             xmlns:zxing="clr-namespace:ZXing.Net.Maui.Controls;assembly=ZXing.Net.MAUI.Controls"
              x:Class="Mobile.MainPage"
              BackgroundColor="#E5E7EB">
 
@@ -105,6 +106,7 @@
                               ColumnDefinitions="Auto, *, Auto">
                             <Button x:Name="BtnShare"
                                     Text="Share"
+                                    Clicked="ShareToPC_Clicked"
                                     BackgroundColor="#3B82F6"
                                     TextColor="White"
                                     FontAttributes="Bold"
@@ -191,7 +193,10 @@
                            FontSize="16"
                            FontAttributes="Bold"
                            TextColor="#374151"/>
-                    <Button Text="/storage/emulated/0/Download/TransFile"
+
+                    <Button x:Name="BtnDownloadFolder"
+                            Text="/storage/emulated/0/Download/TransFile"
+                            Clicked="SelectFolder_Click"
                             HorizontalOptions="Fill"
                             HeightRequest="55"
                             BackgroundColor="#F9FAFB"
@@ -210,6 +215,36 @@
                         HeightRequest="55"
                         CornerRadius="10"/>
             </Grid>
+        </Grid>
+
+        <Grid x:Name="CameraOverlay"
+                IsVisible="False"
+                BackgroundColor="Black"
+                ZIndex="100">
+            <Grid.RowDefinitions>
+                <RowDefinition Height="Auto"/>
+                <RowDefinition Height="*"/>
+                <RowDefinition Height="Auto"/>
+            </Grid.RowDefinitions>
+
+            <Label Grid.Row="0"
+                   Text="Scan the PC's QR Code"
+                   TextColor="White"
+                   HorizontalOptions="Center"
+                   Margin="0,60,0,20"
+                   FontSize="20"
+                   FontAttributes="Bold"/>
+
+            <zxing:CameraBarcodeReaderView Grid.Row="1"
+                                           x:Name="BarcodeReader"
+                                           BarcodesDetected="BarcodeReader_BarcodesDetected"/>
+
+            <Button Grid.Row="2"
+                    Text="Cancel"
+                    Clicked="CancelCamera_Click"
+                    BackgroundColor="#EF4444"
+                    TextColor="White"
+                    Margin="20,20,20,50"/>
         </Grid>
 
     </Grid>

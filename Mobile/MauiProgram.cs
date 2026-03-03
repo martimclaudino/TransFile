@@ -1,24 +1,29 @@
 ﻿using Microsoft.Extensions.Logging;
+using ZXing.Net.Maui.Controls;
+using CommunityToolkit.Maui;
 
-namespace Mobile;
-
-public static class MauiProgram
+namespace Mobile
 {
-	public static MauiApp CreateMauiApp()
+	public static class MauiProgram
 	{
-		var builder = MauiApp.CreateBuilder();
-		builder
-			.UseMauiApp<App>()
-			.ConfigureFonts(fonts =>
-			{
-				fonts.AddFont("OpenSans-Regular.ttf", "OpenSansRegular");
-				fonts.AddFont("OpenSans-Semibold.ttf", "OpenSansSemibold");
-			});
+		public static MauiApp CreateMauiApp()
+		{
+			var builder = MauiApp.CreateBuilder();
+			builder
+				.UseMauiApp<App>()
+				.UseBarcodeReader() // Initializes the QR Code Scanner
+				.UseMauiCommunityToolkit() // Initializes the Toolkit for Folder Picker
+				.ConfigureFonts(fonts =>
+				{
+					fonts.AddFont("OpenSans-Regular.ttf", "OpenSansRegular");
+					fonts.AddFont("OpenSans-Semibold.ttf", "OpenSansSemibold");
+				});
 
 #if DEBUG
-		builder.Logging.AddDebug();
+			builder.Logging.AddDebug();
 #endif
 
-		return builder.Build();
+			return builder.Build();
+		}
 	}
 }
