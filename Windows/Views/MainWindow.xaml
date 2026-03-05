@@ -136,6 +136,7 @@
 
                 <Button x:Name="BtnShare"
                         Content="Share"
+                        Click="BtnShare_Click"
                         HorizontalAlignment="Left"
                         VerticalAlignment="Bottom"
                         Width="120"

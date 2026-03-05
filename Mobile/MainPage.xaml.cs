@@ -2,6 +2,9 @@
 using CommunityToolkit.Maui.Storage;
 using ZXing.Net.Maui;
 using System.Linq;
+using System.Net;
+using System.Net.Http;
+using System.IO;
 
 namespace Mobile;
 
@@ -35,6 +38,9 @@ public partial class MainPage : ContentPage
 			AutoRotate = true,
 			Multiple = false
 		};
+
+		// Inicia o mini-servidor do telemóvel em segundo plano!
+		_ = StartMobileServer();
 	}
 
 	protected override void OnSizeAllocated(double width, double height)
@@ -170,14 +176,22 @@ public partial class MainPage : ContentPage
 			BarcodeReader.IsDetecting = false;
 
 			// UI updates must be done on the Main Thread
-			Dispatcher.Dispatch(() =>
+			Dispatcher.Dispatch(async () =>
 			{
 				CameraOverlay.IsVisible = false;
 
 				// Save the PC's IP address (e.g., http://192.168.1.10:8080)
 				_serverUrl = firstResult.Value;
 
-				DisplayAlert("Success", $"Connected to PC at:\n{_serverUrl}", "OK");
+				// AVISA O PC QUE ESTAMOS LIGADOS PARA ELE GUARDAR O NOSSO IP
+				try
+				{
+					using var client = new HttpClient();
+					await client.GetAsync(_serverUrl.TrimEnd('/') + "/connect");
+				}
+				catch { }
+
+				await DisplayAlert("Success", $"Connected to PC at:\n{_serverUrl}", "OK");
 			});
 		}
 	}
@@ -250,6 +264,69 @@ public partial class MainPage : ContentPage
 		{
 			BtnShare.Text = "Share";
 			BtnShare.IsEnabled = true;
+		}
+	}
+
+	// ==============================================================
+	// Mini Server: Listen for PC files
+	// ==============================================================
+	private async Task StartMobileServer()
+	{
+		try
+		{
+			HttpListener listener = new HttpListener();
+			// O telemóvel fica à escuta na porta 8081
+			listener.Prefixes.Add("http://*:8081/");
+			listener.Start();
+
+			while (true)
+			{
+				HttpListenerContext context = await listener.GetContextAsync();
+				HttpListenerRequest request = context.Request;
+				HttpListenerResponse response = context.Response;
+
+				if (request.Url != null && request.Url.AbsolutePath.TrimEnd('/').Equals("/upload", StringComparison.OrdinalIgnoreCase) && request.HttpMethod == "POST")
+				{
+					try
+					{
+						string fileName = request.Headers["X-FileName"] ?? $"file_mobile_{DateTime.Now.Ticks}.dat";
+						fileName = Uri.UnescapeDataString(fileName);
+
+						// Se o utilizador não tiver selecionado uma pasta, guarda numa pasta temporária da app
+						string destinationFolder = string.IsNullOrEmpty(_downloadPath)
+							? FileSystem.Current.CacheDirectory
+							: _downloadPath;
+
+						string fullPath = Path.Combine(destinationFolder, fileName);
+
+						using (var fileStream = new FileStream(fullPath, FileMode.Create))
+						{
+							await request.InputStream.CopyToAsync(fileStream);
+						}
+
+						// Mostra um aviso no ecrã do telemóvel
+						MainThread.BeginInvokeOnMainThread(() =>
+						{
+							DisplayAlert("Recebido!", $"O PC enviou-te o ficheiro: {fileName}", "OK");
+						});
+
+						response.StatusCode = 200;
+					}
+					catch
+					{
+						response.StatusCode = 500;
+					}
+				}
+				else
+				{
+					response.StatusCode = 200;
+				}
+				response.Close();
+			}
+		}
+		catch (Exception ex)
+		{
+			System.Diagnostics.Debug.WriteLine($"Erro no servidor mobile: {ex.Message}");
 		}
 	}
 }

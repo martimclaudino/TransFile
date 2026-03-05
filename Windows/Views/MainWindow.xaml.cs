@@ -9,6 +9,7 @@ using System.Net.Sockets;
 using System.Windows.Media.Imaging;
 using System.Threading.Tasks;
 using System;
+using System.Net.Http;
 
 namespace Windows.Views
 {
@@ -22,8 +23,9 @@ namespace Windows.Views
     {
         public ObservableCollection<SharedFileItem> SelectedFiles { get; set; }
 
-        // NOVA VARIÁVEL: Guarda a pasta de destino (por defeito vai para os Downloads do PC)
+        // Guarda a pasta de destino (por defeito vai para os Downloads do PC)
         private string _downloadPath = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.UserProfile), "Downloads");
+        private string _mobileIp = string.Empty;
 
         public MainWindow()
         {
@@ -61,6 +63,52 @@ namespace Windows.Views
                         FileName = Path.GetFileName(filename)
                     });
                 }
+            }
+        }
+
+        private async void BtnShare_Click(object sender, RoutedEventArgs e)
+        {
+            if (string.IsNullOrEmpty(_mobileIp))
+            {
+                MessageBox.Show("O telemóvel ainda não se ligou ao PC (Lê o QR Code primeiro)!", "Aviso", MessageBoxButton.OK, MessageBoxImage.Warning);
+                return;
+            }
+
+            BtnShare.IsEnabled = false;
+            BtnShare.Content = "Sending...";
+
+            try
+            {
+                using var client = new HttpClient();
+                // O telemóvel vai estar à escuta na porta 8081
+                string uploadUrl = $"http://{_mobileIp}:8081/upload";
+
+                foreach (var file in SelectedFiles)
+                {
+                    using var fileStream = File.OpenRead(file.FilePath);
+                    using var content = new StreamContent(fileStream);
+
+                    content.Headers.Add("X-FileName", Uri.EscapeDataString(file.FileName));
+
+                    var response = await client.PostAsync(uploadUrl, content);
+
+                    if (!response.IsSuccessStatusCode)
+                    {
+                        MessageBox.Show($"O telemóvel rejeitou o ficheiro {file.FileName}.", "Erro", MessageBoxButton.OK, MessageBoxImage.Error);
+                    }
+                }
+
+                MessageBox.Show("Ficheiros enviados para o telemóvel com sucesso!", "Sucesso", MessageBoxButton.OK, MessageBoxImage.Information);
+                SelectedFiles.Clear();
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show($"Falha ao enviar: {ex.Message}", "Erro de Rede", MessageBoxButton.OK, MessageBoxImage.Error);
+            }
+            finally
+            {
+                BtnShare.Content = "Share";
+                BtnShare.IsEnabled = true;
             }
         }
 
@@ -214,6 +262,12 @@ namespace Windows.Views
                             response.StatusCode = 500;
                             Application.Current.Dispatcher.Invoke(() => MessageBox.Show($"Error saving file: {ex.Message}", "Error", MessageBoxButton.OK, MessageBoxImage.Error));
                         }
+                    }
+                    else if (request.Url != null && request.Url.AbsolutePath.TrimEnd('/').Equals("/connect", StringComparison.OrdinalIgnoreCase))
+                    {
+                        // O telemóvel acabou de ler o QR Code e disse, guardar o IP dele:
+                        _mobileIp = request.RemoteEndPoint.Address.ToString();
+                        response.StatusCode = 200;
                     }
                     else
                     {
