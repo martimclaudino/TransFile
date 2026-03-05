@@ -185,7 +185,7 @@ namespace Windows.Views
                         }
                     }
                     // 2. NOVA ROTA: RECEBER FICHEIROS DO TELEMÓVEL
-                    else if (request.Url != null && request.Url.AbsolutePath.Equals("/upload", StringComparison.OrdinalIgnoreCase) && request.HttpMethod == "POST")
+                    else if (request.Url != null && request.Url.AbsolutePath.TrimEnd('/').Equals("/upload", StringComparison.OrdinalIgnoreCase) && request.HttpMethod == "POST")
                     {
                         try
                         {
