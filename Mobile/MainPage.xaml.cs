@@ -5,6 +5,8 @@ using System.Linq;
 using System.Net;
 using System.Net.Http;
 using System.IO;
+using System.Text.Json;
+using Microsoft.Maui.ApplicationModel;
 
 namespace Mobile;
 
@@ -139,17 +141,44 @@ public partial class MainPage : ContentPage
 	// ==============================================================
 	private async void ConnectScanner_Clicked(object? sender, EventArgs e)
 	{
-		// 1. Close the Settings Menu smoothly
 		await SettingsOverlay.TranslateToAsync(-_screenWidth, 0, 300, Easing.CubicIn);
 
-		// 2. Ask Android for Camera permissions
+		// 1. PEDIR ACESSO TOTAL AOS FICHEIROS (Apenas aplicável se for Android)
+#if ANDROID
+        if (Android.OS.Build.VERSION.SdkInt >= Android.OS.BuildVersionCodes.R) // Se for Android 11 ou superior
+        {
+            // Verifica se a app já tem a permissão especial de ver TUDO
+            if (!Android.OS.Environment.IsExternalStorageManager)
+            {
+                await DisplayAlert("Permissão Necessária", "Para que o PC consiga ver todos os ficheiros, o Android exige que dês permissão de 'Gestão de todos os ficheiros'. Vais ser redirecionado para as definições. Ativa a opção para a TransFile e volta atrás.", "Entendido");
+                
+                // Abre a página exata das definições do Android para o utilizador ativar
+                var intent = new Android.Content.Intent(Android.Provider.Settings.ActionManageAppAllFilesAccessPermission);
+                intent.AddCategory("android.intent.category.DEFAULT");
+                intent.SetData(Android.Net.Uri.Parse($"package:{AppInfo.Current.PackageName}"));
+                Microsoft.Maui.ApplicationModel.Platform.CurrentActivity?.StartActivity(intent);
+                
+                return; // O utilizador vai às definições. Quando voltar, tem de clicar no botão "Phone" de novo!
+            }
+        }
+        else
+        {
+            // Para Android 10 ou inferior, a permissão antiga chega
+            var storageStatus = await Permissions.CheckStatusAsync<Permissions.StorageRead>();
+            if (storageStatus != PermissionStatus.Granted)
+            {
+                await Permissions.RequestAsync<Permissions.StorageRead>();
+            }
+        }
+#endif
+
+		// 2. PEDIR ACESSO À CÂMARA E ABRIR O SCANNER
 		var status = await Permissions.CheckStatusAsync<Permissions.Camera>();
 		if (status != PermissionStatus.Granted)
 		{
 			status = await Permissions.RequestAsync<Permissions.Camera>();
 		}
 
-		// 3. If granted, show the camera overlay!
 		if (status == PermissionStatus.Granted)
 		{
 			CameraOverlay.IsVisible = true;
@@ -172,18 +201,13 @@ public partial class MainPage : ContentPage
 		var firstResult = e.Results?.FirstOrDefault();
 		if (firstResult != null)
 		{
-			// Stop detecting immediately
 			BarcodeReader.IsDetecting = false;
 
-			// UI updates must be done on the Main Thread
 			Dispatcher.Dispatch(async () =>
 			{
 				CameraOverlay.IsVisible = false;
-
-				// Save the PC's IP address (e.g., http://192.168.1.10:8080)
 				_serverUrl = firstResult.Value;
 
-				// AVISA O PC QUE ESTAMOS LIGADOS PARA ELE GUARDAR O NOSSO IP
 				try
 				{
 					using var client = new HttpClient();
@@ -236,13 +260,11 @@ public partial class MainPage : ContentPage
 			using var client = new HttpClient();
 			string uploadUrl = _serverUrl.TrimEnd('/') + "/upload";
 
-			// Envia um ficheiro de cada vez
 			foreach (var file in SelectedFiles)
 			{
 				using var fileStream = File.OpenRead(file.FilePath);
 				using var content = new StreamContent(fileStream);
 
-				// Colocamos o nome do ficheiro no cabeçalho (Header) para o PC saber o que está a receber
 				content.Headers.Add("X-FileName", Uri.EscapeDataString(file.FileName));
 
 				var response = await client.PostAsync(uploadUrl, content);
@@ -275,7 +297,6 @@ public partial class MainPage : ContentPage
 		try
 		{
 			HttpListener listener = new HttpListener();
-			// O telemóvel fica à escuta na porta 8081
 			listener.Prefixes.Add("http://*:8081/");
 			listener.Start();
 
@@ -285,6 +306,7 @@ public partial class MainPage : ContentPage
 				HttpListenerRequest request = context.Request;
 				HttpListenerResponse response = context.Response;
 
+				// 1. RECEIVE FILES FROM PC
 				if (request.Url != null && request.Url.AbsolutePath.TrimEnd('/').Equals("/upload", StringComparison.OrdinalIgnoreCase) && request.HttpMethod == "POST")
 				{
 					try
@@ -292,7 +314,6 @@ public partial class MainPage : ContentPage
 						string fileName = request.Headers["X-FileName"] ?? $"file_mobile_{DateTime.Now.Ticks}.dat";
 						fileName = Uri.UnescapeDataString(fileName);
 
-						// Se o utilizador não tiver selecionado uma pasta, guarda numa pasta temporária da app
 						string destinationFolder = string.IsNullOrEmpty(_downloadPath)
 							? FileSystem.Current.CacheDirectory
 							: _downloadPath;
@@ -304,23 +325,104 @@ public partial class MainPage : ContentPage
 							await request.InputStream.CopyToAsync(fileStream);
 						}
 
-						// Mostra um aviso no ecrã do telemóvel
 						MainThread.BeginInvokeOnMainThread(() =>
 						{
-							DisplayAlert("Recebido!", $"O PC enviou-te o ficheiro: {fileName}", "OK");
+							DisplayAlert("Received!", $"The PC sent you a file: {fileName}", "OK");
 						});
 
 						response.StatusCode = 200;
 					}
-					catch
+					catch { response.StatusCode = 500; }
+				}
+				// 2. NEW: SEND DIRECTORY LIST TO PC (FILE EXPLORER)
+				else if (request.Url != null && request.Url.AbsolutePath.TrimEnd('/').Equals("/list", StringComparison.OrdinalIgnoreCase) && request.HttpMethod == "GET")
+				{
+					try
+					{
+						string requestedPath = request.QueryString["path"];
+
+						if (string.IsNullOrEmpty(requestedPath))
+						{
+							requestedPath = "/storage/emulated/0"; // Diretoria principal no Android
+						}
+
+						var items = new System.Collections.Generic.List<object>();
+						var di = new DirectoryInfo(requestedPath);
+
+						if (di.Exists)
+						{
+							// Apanha as pastas e isola os erros
+							try
+							{
+								foreach (var dir in di.GetDirectories())
+								{
+									items.Add(new { Name = dir.Name, Path = dir.FullName, IsDirectory = true });
+								}
+							}
+							catch { /* Se o Android bloquear pastas de sistema, simplesmente ignora-as e avança */ }
+
+							// Apanha os ficheiros e isola os erros
+							try
+							{
+								foreach (var file in di.GetFiles())
+								{
+									items.Add(new { Name = file.Name, Path = file.FullName, IsDirectory = false });
+								}
+							}
+							catch { /* Ignora se houver ficheiros bloqueados */ }
+						}
+
+						string json = JsonSerializer.Serialize(items);
+						byte[] buf = System.Text.Encoding.UTF8.GetBytes(json);
+
+						response.ContentType = "application/json";
+						response.ContentLength64 = buf.Length;
+						await response.OutputStream.WriteAsync(buf, 0, buf.Length);
+						response.StatusCode = 200;
+					}
+					catch (Exception)
 					{
 						response.StatusCode = 500;
 					}
+				}
+				// 3. NEW: SERVE SPECIFIC FILE TO PC BY FULL PATH
+				else if (request.Url != null && request.Url.AbsolutePath.TrimEnd('/').Equals("/downloadfile", StringComparison.OrdinalIgnoreCase) && request.HttpMethod == "GET")
+				{
+					try
+					{
+						string filePath = request.QueryString["path"];
+
+						if (!string.IsNullOrEmpty(filePath))
+						{
+							filePath = Uri.UnescapeDataString(filePath);
+
+							if (File.Exists(filePath))
+							{
+								byte[] fileBytes = File.ReadAllBytes(filePath);
+								response.ContentType = "application/octet-stream";
+								response.ContentLength64 = fileBytes.Length;
+								response.AddHeader("Content-Disposition", $"attachment; filename=\"{Path.GetFileName(filePath)}\"");
+
+								await response.OutputStream.WriteAsync(fileBytes, 0, fileBytes.Length);
+								response.StatusCode = 200;
+							}
+							else
+							{
+								response.StatusCode = 404; // File not found
+							}
+						}
+						else
+						{
+							response.StatusCode = 400; // Bad request
+						}
+					}
+					catch { response.StatusCode = 500; }
 				}
 				else
 				{
 					response.StatusCode = 200;
 				}
+
 				response.Close();
 			}
 		}

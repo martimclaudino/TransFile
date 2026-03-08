@@ -23,7 +23,6 @@ namespace Windows.Views
     {
         public ObservableCollection<SharedFileItem> SelectedFiles { get; set; }
 
-        // Guarda a pasta de destino (por defeito vai para os Downloads do PC)
         private string _downloadPath = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.UserProfile), "Downloads");
         private string _mobileIp = string.Empty;
 
@@ -80,7 +79,6 @@ namespace Windows.Views
             try
             {
                 using var client = new HttpClient();
-                // O telemóvel vai estar à escuta na porta 8081
                 string uploadUrl = $"http://{_mobileIp}:8081/upload";
 
                 foreach (var file in SelectedFiles)
@@ -129,7 +127,6 @@ namespace Windows.Views
 
             if (folderDialog.ShowDialog() == true)
             {
-                // ATUALIZADO: Guarda o caminho real para a variável e mostra no botão
                 _downloadPath = folderDialog.FolderName;
                 BtnDownloadPath.Content = _downloadPath;
             }
@@ -195,6 +192,55 @@ namespace Windows.Views
         }
 
         // ==============================================================
+        // LIGAÇÃO AO EXPLORADOR DO TELEMÓVEL (POP-UP)
+        // ==============================================================
+
+        private async void BtnRefreshMobile_Click(object sender, RoutedEventArgs e)
+        {
+            if (string.IsNullOrEmpty(_mobileIp))
+            {
+                MessageBox.Show("Please connect to the phone first by scanning the QR code.", "Not Connected", MessageBoxButton.OK, MessageBoxImage.Warning);
+                return;
+            }
+
+            // Abre a nova janela do Explorador (Pop-up)
+            var explorer = new MobileExplorerWindow(_mobileIp)
+            {
+                Owner = this // Faz com que o pop-up abra centrado nesta janela
+            };
+
+            // Se o utilizador clicar em "Select to Download" na janela...
+            if (explorer.ShowDialog() == true)
+            {
+                var fileToDownload = explorer.SelectedFileToDownload;
+                if (fileToDownload != null)
+                {
+                    await DownloadFileFromPhone(fileToDownload.Path, fileToDownload.Name);
+                }
+            }
+        }
+
+        private async Task DownloadFileFromPhone(string remotePath, string fileName)
+        {
+            try
+            {
+                using var client = new HttpClient();
+                string url = $"http://{_mobileIp}:8081/downloadfile?path={Uri.EscapeDataString(remotePath)}";
+
+                byte[] fileBytes = await client.GetByteArrayAsync(url);
+                string savePath = Path.Combine(_downloadPath, fileName);
+
+                File.WriteAllBytes(savePath, fileBytes);
+
+                MessageBox.Show($"File downloaded successfully to:\n{savePath}", "Success", MessageBoxButton.OK, MessageBoxImage.Information);
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show($"Download failed: {ex.Message}", "Error", MessageBoxButton.OK, MessageBoxImage.Error);
+            }
+        }
+
+        // ==============================================================
         // MINI WEB SERVER (The Mailman)
         // ==============================================================
         private async Task StartWebServer()
@@ -213,7 +259,6 @@ namespace Windows.Views
                     HttpListenerRequest request = context.Request;
                     HttpListenerResponse response = context.Response;
 
-                    // 1. ROTA DE DOWNLOAD DO APK
                     if (request.Url != null && request.Url.AbsolutePath.Equals("/download", StringComparison.OrdinalIgnoreCase))
                     {
                         string currentDirectory = Directory.GetCurrentDirectory();
@@ -232,24 +277,20 @@ namespace Windows.Views
                             response.StatusCode = 404;
                         }
                     }
-                    // 2. NOVA ROTA: RECEBER FICHEIROS DO TELEMÓVEL
                     else if (request.Url != null && request.Url.AbsolutePath.TrimEnd('/').Equals("/upload", StringComparison.OrdinalIgnoreCase) && request.HttpMethod == "POST")
                     {
                         try
                         {
-                            // Apanha o nome do ficheiro que o telemóvel enviou no cabeçalho
                             string fileName = request.Headers["X-FileName"] ?? $"file_{DateTime.Now.Ticks}.dat";
-                            fileName = Uri.UnescapeDataString(fileName); // Descodifica espaços e acentos
+                            fileName = Uri.UnescapeDataString(fileName);
 
                             string fullPath = Path.Combine(_downloadPath, fileName);
 
-                            // Pega nos dados (Stream) e guarda diretamente na pasta selecionada
                             using (var fileStream = new FileStream(fullPath, FileMode.Create))
                             {
                                 await request.InputStream.CopyToAsync(fileStream);
                             }
 
-                            // Mostra um aviso na interface do PC a dizer que recebeu o ficheiro
                             Application.Current.Dispatcher.Invoke(() =>
                             {
                                 MessageBox.Show($"File received successfully:\n{fileName}", "Incoming File", MessageBoxButton.OK, MessageBoxImage.Information);
@@ -265,7 +306,6 @@ namespace Windows.Views
                     }
                     else if (request.Url != null && request.Url.AbsolutePath.TrimEnd('/').Equals("/connect", StringComparison.OrdinalIgnoreCase))
                     {
-                        // O telemóvel acabou de ler o QR Code e disse, guardar o IP dele:
                         _mobileIp = request.RemoteEndPoint.Address.ToString();
                         response.StatusCode = 200;
                     }
