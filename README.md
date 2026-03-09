@@ -1,6 +1,6 @@
 # TransFile 
 
-![.NET](https://img.shields.io/badge/.NET-8.0-512BD4?style=for-the-badge&logo=dotnet&logoColor=white)
+![.NET](https://img.shields.io/badge/.NET-10.0-512BD4?style=for-the-badge&logo=dotnet&logoColor=white)
 ![WPF](https://img.shields.io/badge/Windows-WPF-0078D6?style=for-the-badge&logo=windows&logoColor=white)
 ![MAUI](https://img.shields.io/badge/Android-MAUI-3DDC84?style=for-the-badge&logo=android&logoColor=white)
 ![C#](https://img.shields.io/badge/C%23-239120?style=for-the-badge&logo=c-sharp&logoColor=white)
@@ -60,9 +60,14 @@ The project is split into two applications that simultaneously act as both REST 
 To compile and run this project locally, you will need:
 
 * [Visual Studio 2022](https://visualstudio.microsoft.com/) (with the **.NET desktop development** and **.NET Multi-platform App UI development** workloads installed).
-* .NET 8.0 SDK.
+* .NET 10.0 SDK.
 * An Android device (or emulator) and a Windows PC **connected to the same Wi-Fi network**.
 
+* To install dependencies there is a batch file with a script. You can run the following command on the TransFile root directory
+  ```bash
+  .\install_dependencies.bat
+  ```
+  
 ### How to run:
 - Clone this repository:
    ```bash
