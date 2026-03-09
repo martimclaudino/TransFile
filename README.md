@@ -1,7 +1,3 @@
-## TransFile
-
-Transfer files from windows to android!
-
 # TransFile 
 
 ![.NET](https://img.shields.io/badge/.NET-8.0-512BD4?style=for-the-badge&logo=dotnet&logoColor=white)
