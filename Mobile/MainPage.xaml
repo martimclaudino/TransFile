@@ -150,6 +150,7 @@
 
                             <Button Grid.Column="2"
                                     Text="PC"
+                                    Clicked="OpenPcExplorer_Clicked"
                                     BackgroundColor="#8B5CF6"
                                     TextColor="White"
                                     FontAttributes="Bold"
@@ -218,9 +219,9 @@
         </Grid>
 
         <Grid x:Name="CameraOverlay"
-                IsVisible="False"
-                BackgroundColor="Black"
-                ZIndex="100">
+              IsVisible="False"
+              BackgroundColor="Black"
+              ZIndex="100">
             <Grid.RowDefinitions>
                 <RowDefinition Height="Auto"/>
                 <RowDefinition Height="*"/>

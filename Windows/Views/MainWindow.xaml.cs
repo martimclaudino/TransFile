@@ -10,6 +10,7 @@ using System.Windows.Media.Imaging;
 using System.Threading.Tasks;
 using System;
 using System.Net.Http;
+using System.Text.Json;
 
 namespace Windows.Views
 {
@@ -259,6 +260,9 @@ namespace Windows.Views
                     HttpListenerRequest request = context.Request;
                     HttpListenerResponse response = context.Response;
 
+                    // ==========================================
+                    // ROTA 1: DOWNLOAD DO APK DA APP
+                    // ==========================================
                     if (request.Url != null && request.Url.AbsolutePath.Equals("/download", StringComparison.OrdinalIgnoreCase))
                     {
                         string currentDirectory = Directory.GetCurrentDirectory();
@@ -277,6 +281,9 @@ namespace Windows.Views
                             response.StatusCode = 404;
                         }
                     }
+                    // ==========================================
+                    // ROTA 2: RECEBER FICHEIROS DO TELEMÓVEL
+                    // ==========================================
                     else if (request.Url != null && request.Url.AbsolutePath.TrimEnd('/').Equals("/upload", StringComparison.OrdinalIgnoreCase) && request.HttpMethod == "POST")
                     {
                         try
@@ -304,10 +311,96 @@ namespace Windows.Views
                             Application.Current.Dispatcher.Invoke(() => MessageBox.Show($"Error saving file: {ex.Message}", "Error", MessageBoxButton.OK, MessageBoxImage.Error));
                         }
                     }
+                    // ==========================================
+                    // ROTA 3: LIGAÇÃO INICIAL E GUARDAR IP DO TELEMÓVEL
+                    // ==========================================
                     else if (request.Url != null && request.Url.AbsolutePath.TrimEnd('/').Equals("/connect", StringComparison.OrdinalIgnoreCase))
                     {
                         _mobileIp = request.RemoteEndPoint.Address.ToString();
                         response.StatusCode = 200;
+                    }
+                    // ==========================================
+                    // ROTA 4: LISTAR DISCOS/FICHEIROS DO PC (NOVO)
+                    // ==========================================
+                    else if (request.Url != null && request.Url.AbsolutePath.TrimEnd('/').Equals("/list", StringComparison.OrdinalIgnoreCase) && request.HttpMethod == "GET")
+                    {
+                        try
+                        {
+                            string? requestedPath = request.QueryString["path"];
+                            var items = new System.Collections.Generic.List<object>();
+
+                            // Se for "root" ou vazio, listamos os discos rígidos do PC (C:\, D:\, etc.)
+                            if (string.IsNullOrEmpty(requestedPath) || requestedPath == "root")
+                            {
+                                foreach (var drive in DriveInfo.GetDrives().Where(d => d.IsReady))
+                                {
+                                    items.Add(new { Name = drive.Name, Path = drive.Name, IsDirectory = true });
+                                }
+                            }
+                            else
+                            {
+                                var di = new DirectoryInfo(requestedPath);
+                                if (di.Exists)
+                                {
+                                    // Listar as Pastas (Ignoramos pastas do sistema/ocultas para não dar erros de permissão)
+                                    foreach (var dir in di.GetDirectories().Where(d => !d.Attributes.HasFlag(FileAttributes.Hidden)))
+                                    {
+                                        items.Add(new { Name = dir.Name, Path = dir.FullName, IsDirectory = true });
+                                    }
+                                    // Listar Ficheiros
+                                    foreach (var file in di.GetFiles().Where(f => !f.Attributes.HasFlag(FileAttributes.Hidden)))
+                                    {
+                                        items.Add(new { Name = file.Name, Path = file.FullName, IsDirectory = false });
+                                    }
+                                }
+                            }
+
+                            string json = JsonSerializer.Serialize(items);
+                            byte[] buf = System.Text.Encoding.UTF8.GetBytes(json);
+                            response.ContentType = "application/json";
+                            response.ContentLength64 = buf.Length;
+                            await response.OutputStream.WriteAsync(buf, 0, buf.Length);
+                            response.StatusCode = 200;
+                        }
+                        catch (Exception)
+                        {
+                            response.StatusCode = 500;
+                        }
+                    }
+                    // ==========================================
+                    // ROTA 5: ENVIAR UM FICHEIRO DO PC PARA O TELEMÓVEL (NOVO)
+                    // ==========================================
+                    else if (request.Url != null && request.Url.AbsolutePath.TrimEnd('/').Equals("/downloadfile", StringComparison.OrdinalIgnoreCase) && request.HttpMethod == "GET")
+                    {
+                        try
+                        {
+                            string? filePath = request.QueryString["path"];
+                            if (!string.IsNullOrEmpty(filePath))
+                            {
+                                filePath = Uri.UnescapeDataString(filePath);
+                                if (File.Exists(filePath))
+                                {
+                                    byte[] fileBytes = File.ReadAllBytes(filePath);
+                                    response.ContentType = "application/octet-stream";
+                                    response.ContentLength64 = fileBytes.Length;
+                                    response.AddHeader("Content-Disposition", $"attachment; filename=\"{Path.GetFileName(filePath)}\"");
+                                    await response.OutputStream.WriteAsync(fileBytes, 0, fileBytes.Length);
+                                    response.StatusCode = 200;
+                                }
+                                else
+                                {
+                                    response.StatusCode = 404; // Ficheiro não encontrado
+                                }
+                            }
+                            else
+                            {
+                                response.StatusCode = 400; // Pedido mal formulado
+                            }
+                        }
+                        catch (Exception)
+                        {
+                            response.StatusCode = 500; // Erro interno
+                        }
                     }
                     else
                     {

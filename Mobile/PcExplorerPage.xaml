@@ -1,0 +1,60 @@
+<ContentPage xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
+             x:Class="Mobile.PcExplorerPage"
+             Title="PC File Explorer"
+             BackgroundColor="#F3F4F6">
+    <Grid RowDefinitions="Auto, *"
+          Margin="10">
+
+        <Grid Grid.Row="0"
+              ColumnDefinitions="Auto, *"
+              Margin="0,0,0,10">
+            <Button Text="🡄 Back"
+                    Clicked="BtnBack_Clicked"
+                    BackgroundColor="#E5E7EB"
+                    TextColor="Black"
+                    HeightRequest="40"
+                    CornerRadius="5"/>
+            <Frame Grid.Column="1"
+                   Margin="10,0,0,0"
+                   Padding="10,0"
+                   BackgroundColor="White"
+                   BorderColor="#D1D5DB"
+                   CornerRadius="5">
+                <Label x:Name="LblCurrentPath"
+                       VerticalOptions="Center"
+                       LineBreakMode="HeadTruncation"/>
+            </Frame>
+        </Grid>
+
+        <CollectionView x:Name="ColFiles"
+                        Grid.Row="1"
+                        SelectionMode="Single"
+                        SelectionChanged="ColFiles_SelectionChanged">
+            <CollectionView.ItemTemplate>
+                <DataTemplate>
+                    <Grid Padding="10"
+                            ColumnDefinitions="Auto, *">
+                        <Label Text="{Binding Icon}"
+                               FontSize="20"
+                               VerticalOptions="Center"
+                               Margin="0,0,10,0"/>
+                        <Label Grid.Column="1"
+                               Text="{Binding Name}"
+                               FontSize="16"
+                               TextColor="Black"
+                               VerticalOptions="Center"/>
+                    </Grid>
+                </DataTemplate>
+            </CollectionView.ItemTemplate>
+        </CollectionView>
+
+        <ActivityIndicator x:Name="Loader"
+                           Grid.Row="1"
+                           IsRunning="False"
+                           IsVisible="False"
+                           HorizontalOptions="Center"
+                           VerticalOptions="Center"
+                           Color="#3B82F6"/>
+    </Grid>
+</ContentPage>

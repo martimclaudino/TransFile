@@ -23,7 +23,8 @@ public partial class MainPage : ContentPage
 
 	// New variables to store PC connection and Download Path
 	private string _serverUrl = string.Empty;
-	private string _downloadPath = string.Empty;
+	// ATUALIZADO: Fica com o caminho de Downloads por defeito!
+	private string _downloadPath = "/storage/emulated/0/Download/TransFile";
 
 	public MainPage()
 	{
@@ -290,6 +291,20 @@ public partial class MainPage : ContentPage
 	}
 
 	// ==============================================================
+	// ABRIR EXPLORADOR DO PC (NOVO)
+	// ==============================================================
+	private async void OpenPcExplorer_Clicked(object sender, EventArgs e)
+	{
+		if (string.IsNullOrEmpty(_serverUrl))
+		{
+			await DisplayAlert("Not connected", "Please scan the PC's QR code first!", "OK");
+			return;
+		}
+
+		await Navigation.PushModalAsync(new PcExplorerPage(_serverUrl, _downloadPath));
+	}
+
+	// ==============================================================
 	// Mini Server: Listen for PC files
 	// ==============================================================
 	private async Task StartMobileServer()
@@ -314,9 +329,16 @@ public partial class MainPage : ContentPage
 						string fileName = request.Headers["X-FileName"] ?? $"file_mobile_{DateTime.Now.Ticks}.dat";
 						fileName = Uri.UnescapeDataString(fileName);
 
+						// Usa o _downloadPath (que agora tem um valor padrão por defeito)
 						string destinationFolder = string.IsNullOrEmpty(_downloadPath)
-							? FileSystem.Current.CacheDirectory
+							? "/storage/emulated/0/Download/TransFile"
 							: _downloadPath;
+
+						// GARANTE QUE A PASTA EXISTE ANTES DE GRAVAR
+						if (!Directory.Exists(destinationFolder))
+						{
+							Directory.CreateDirectory(destinationFolder);
+						}
 
 						string fullPath = Path.Combine(destinationFolder, fileName);
 
@@ -325,16 +347,29 @@ public partial class MainPage : ContentPage
 							await request.InputStream.CopyToAsync(fileStream);
 						}
 
+						// AVISAR O SISTEMA ANDROID PARA MOSTRAR O FICHEIRO NA GALERIA/EXPLORADOR
+#if ANDROID
+                        try
+                        {
+                            Android.Media.MediaScannerConnection.ScanFile(
+                                Microsoft.Maui.ApplicationModel.Platform.AppContext, 
+                                new string[] { fullPath }, 
+                                null, 
+                                null);
+                        }
+                        catch { /* Ignorar erros do scanner */ }
+#endif
+
 						MainThread.BeginInvokeOnMainThread(() =>
 						{
-							DisplayAlert("Received!", $"The PC sent you a file: {fileName}", "OK");
+							DisplayAlert("Received!", $"The PC sent you a file:\n{fileName}\n\nSaved in:\n{destinationFolder}", "OK");
 						});
 
 						response.StatusCode = 200;
 					}
 					catch { response.StatusCode = 500; }
 				}
-				// 2. NEW: SEND DIRECTORY LIST TO PC (FILE EXPLORER)
+				// 2. SEND DIRECTORY LIST TO PC (FILE EXPLORER)
 				else if (request.Url != null && request.Url.AbsolutePath.TrimEnd('/').Equals("/list", StringComparison.OrdinalIgnoreCase) && request.HttpMethod == "GET")
 				{
 					try
@@ -385,7 +420,7 @@ public partial class MainPage : ContentPage
 						response.StatusCode = 500;
 					}
 				}
-				// 3. NEW: SERVE SPECIFIC FILE TO PC BY FULL PATH
+				// 3. SERVE SPECIFIC FILE TO PC BY FULL PATH
 				else if (request.Url != null && request.Url.AbsolutePath.TrimEnd('/').Equals("/downloadfile", StringComparison.OrdinalIgnoreCase) && request.HttpMethod == "GET")
 				{
 					try
