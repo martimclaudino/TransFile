@@ -64,28 +64,28 @@ To compile and run this project locally, you will need:
 * An Android device (or emulator) and a Windows PC **connected to the same Wi-Fi network**.
 
 ### How to run:
-1. Clone this repository:
+- Clone this repository:
    ```bash
-   git clone [https://github.com/martimclaudino/TransFile.git](https://github.com/martimclaudino/TransFile.git)
+   git clone https://github.com/martimclaudino/TransFile.git
    ```
 
-2. Change into the TransFile/Windows directory (you will need to be in admin mode)
+- Change into the TransFile/Windows directory (you will need to be in admin mode)
    ```bash
    cd TransFile/Windows
    ```
 
-3. Run the following command
+- Run the following command
    ```bash
    dotnet run
    ```
 
-4. The Windows App window will open. Go into the *Settings* tab and generate the download QR code with your phone.
+- The Windows App window will open. Go into the *Settings* tab and generate the download QR code with your phone.
    You can also change the directory to which the files will be saved to if you please.
 
-5. After downloading the Android App grant the camera access permission (it will ask you automatically).
+- After downloading the Android App grant the camera access permission (it will ask you automatically).
 
-6. Go into the *Settings* tab on the Mobile App and **Connect to Windows Device**. This will open your camera.
+- Go into the *Settings* tab on the Mobile App and `Connect to Windows Device`. This will open your camera.
 
-7. On the *Settings* tab in the Windows App, **Generate qr code**. Scan it with your phone.
+- On the *Settings* tab in the Windows App, `Generate qr code`. Scan it with your phone.
 
-8. Congrats, you can now easily transfer files between your Android and Windows devices with the intuitive interface.
+- Congrats! You can now easily transfer files between your Android and Windows devices with the intuitive interface.
