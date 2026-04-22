@@ -24,7 +24,6 @@ This project eliminates the friction of moving files between mobile devices and 
 
 ## 📸 Screenshots
 
-*(Add screenshots of your project here. Place the images in an `/assets` folder in your repository and replace the links below)*
 
 <p float="left">
   <img src="assets/ShareFilesWithYourPhoneList.png" width="400" alt="Windows Dashboard" />
